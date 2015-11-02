@@ -9,7 +9,7 @@
 #laptop hp at satelite
 #SERVER_ADDRESS = "http://192.168.0.105"
 #casa enrique
-SERVER_ADDRESS="http://192.168.0.104"
+SERVER_ADDRESS="http://192.168.0.102"
 
 PORT = 5000
 

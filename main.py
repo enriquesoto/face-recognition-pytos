@@ -7,11 +7,10 @@ class Main:
 	#pathInput = ''
 
 
-	def __init__(self,basenamecvs,offload,imagesSource):
+	def __init__(self,imagesSource):
 		self.settingsCascade = constants.HAAR_CASCADE_FILE #configuration file
-		self.basenamecvs = basenamecvs   # name of the file where stats will be written
-		self.offload = True if offload == 'remote' else False #offload to cloudlet or not
-		self.tmpImgFilebasename='' # for statistics porpuses
+		#self.basenamecvs = basenamecvs   # name of the file where stats will be written
+		#self.offload = True if offload == 'remote' else False #offload to cloudlet or not
 		self.imagesSource = imagesSource
 	
 	def start(self):
@@ -23,7 +22,6 @@ class Main:
 	
 	def startFromDirectory(self):
 		self.pathInput = constants.PATH_IMG_INPUT   #input folder where images will be taken from
-		pdb.set_trace()
 		self.pathOutput = constants.PATH_IMG_OUTPUT  #output where imagens will be stored
 		listing = os.listdir(self.pathInput)
 		for file in listing:
@@ -38,8 +36,8 @@ class Main:
 				cv2.imwrite(self.pathOutput+'process'+self.tmpImgFilebasename,img)
 
 	def startFromVideoCapture(self):
-		self.pathOutput = constants.PATH_IMG_OUTPUT  #output where imagens will be stored
-		video_capture = cv2.VideoCapture(1)
+		#self.pathOutput = constants.PATH_IMG_OUTPUT  #output where imagens will be stored
+		video_capture = cv2.VideoCapture(0)
 		ret = video_capture.set(3,constants.VIDEO_WIDTH) #320
 		ret = video_capture.set(4,constants.VIDEO_HEIGHT) #200
 		width = video_capture.get(3) #real width
@@ -57,7 +55,7 @@ class Main:
 			faces = self.faceRecognition(frame)
 			for (x,y,w,h) in faces:
 				cv2.rectangle(frame,(x,y),(x+w,y+h),(255,0,0),2)
-			cv2.imwrite(self.pathOutput+'process'+str(frameCount)+".jpg",frame)
+			#cv2.imwrite(self.pathOutput+'process'+str(frameCount)+".jpg",frame)
 			fps_end_time = time.time()
 			if fps_end_time - fps_start_time > 1:
 				#pdb.set_trace()
@@ -77,22 +75,14 @@ class Main:
 		return faces
 
 if __name__ == "__main__":
-	if len(sys.argv) < 4:
-		print " you must enter 2 arguments!! in this order: basenameofcvs(time execution of decorated functions) local/remote video/directory"
-		sys.exit()
-	if len(sys.argv) == 4:
-		offloadOptions = ['remote','local']
-		imagesSourceOptions = ['video','directory']
-		if sys.argv[2] not in offloadOptions:
-			print "bad request "
-			sys.exit()
+	if len(sys.argv) < 2:
+		#print " you must enter 2 arguments!! in this order: basenameofcvs(time execution of decorated functions) local/remote video/directory"
 
-			sys.exit()
-		start_time = time.time()
-		print "decorated execution started"
-		x = Main(sys.argv[1],sys.argv[2],sys.argv[3]) #local
-		pdb.set_trace()
-		x.start()
-		end_time = time.time()
-		print("---  decorated execution ended and tooks: %s ---" % (end_time - start_time))
+		sys.exit()
+	if len(sys.argv) == 2:
+		imagesSourceOptions = ['video','directory']
+	if sys.argv[1] not in imagesSourceOptions:
+		print "bad request "
+	x = Main(sys.argv[1]) #local
+	x.start()
 

@@ -1,6 +1,7 @@
 # main definitions
 import time
 import rpyc
+from tendo import singleton
 from rpyc.utils.server import ThreadedServer
 from threading import Thread
 
@@ -12,6 +13,7 @@ class MyService(rpyc.Service):
         return main.offloading
 
 if __name__ == '__main__':
+	me = singleton.SingleInstance() # will sys.exit(-1) if other instance is running
 	server = ThreadedServer(MyService, port = 12345)
 	t = Thread(target = server.start)
 	t.daemon = True
