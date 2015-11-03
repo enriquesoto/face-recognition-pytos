@@ -10,6 +10,8 @@
 #SERVER_ADDRESS = "http://192.168.0.105"
 #casa enrique
 SERVER_ADDRESS="http://192.168.0.102"
+timeGap=3
+killingTime=1800
 
 PORT = 5000
 

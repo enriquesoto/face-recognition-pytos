@@ -9,9 +9,7 @@ import os
 def offload(func):
     def inner(*args,**kwargs):
 		urlServer = constants.SERVER_ADDRESS+':'+str(constants.PORT)		
-		#print "Arguments were: %s, %s" % (args,kwargs)
-		#print inspect.getsourcelines(func)
-		#os.system('python pytos_daemon.py')
+		os.system('python pytos/pytos_daemon.py &')
 		argsObj = args[0]
 		##basenamecvs = argsObj.basenamecvs
 		#inputFolder = argsObj.pathInput
