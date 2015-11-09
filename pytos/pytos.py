@@ -1,14 +1,39 @@
 import constants,inspect,time,requests,pdb,os,csv,datetime,os,cv2,simplejson
+import rpyc
 from StringIO import StringIO
 from cStringIO import StringIO
 from PIL import Image
 import numpy as np
 import pytos_daemon as pd
 import os
+import pytosdb
+import time
+
+class Offloading:
+	func = None
+	def __init__(func):
+		self.func=func
+	def prepare(self):
+		pass
+	
+	def decision(self)
+		pass
+	
+	def persists(self)
+		pass
+	
+	def start(self)
+		self.prepare()
+		self.decision()
+		self.persists()
 
 def offload(func):
     def inner(*args,**kwargs):
 		urlServer = constants.SERVER_ADDRESS+':'+str(constants.PORT)		
+
+
+		#pdb.set_trace()
+		db = pytosdb.PytosDB()
 		os.system('python pytos/pytos_daemon.py &')
 		argsObj = args[0]
 		##basenamecvs = argsObj.basenamecvs
@@ -16,7 +41,10 @@ def offload(func):
 		#outputFolder = argsObj.pathOutput
 		#testDataBasename = basenamecvs+'-'+str(now.month)+'-'+str(now.day)+'.csv'
 		#offload = None
-		offload = True
+		conn = rpyc.connect("localhost", 22345)
+		c = conn.root
+		offload = c.getOffloadingDesicion()
+		#offload = False
 		if not offload:
 			print "---> decorated function started locally"
 			#testDataPath = constants.DATA_TEST_LOCAL+testDataBasename
@@ -41,7 +69,7 @@ def offload(func):
 		#with open(testDataPath,'a') as csvfile:
 		#statsWriter = csv.writer(csvfile, delimiter=',',quotechar='|', quoting=csv.QUOTE_MINIMAL)
 			start_time = time.time()
-				#pdb.set_trace()
+			#pdb.set_trace()
 				#func(*args,**kwargs)
 			task='/heavyTask'
 				#pathFile = args[0].__dict__.get("pathInput")

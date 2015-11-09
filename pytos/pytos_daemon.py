@@ -29,5 +29,26 @@ if __name__ == '__main__':
 		if main.idleTime >= constants.killingTime:
 			sys.exit()
 		main.idleTime += constants.timeGap 
-		main.offloading = True
+		main.offloading =True
 		time.sleep(constants.timeGap)
+
+class Solver():
+	def __init__(self):
+		pass
+	def forecast(self, argList):
+		argsSize=0
+		for arg in argList:
+			argSize+=getSizeInBytes(arg)
+
+	
+	def getSizeInBytes(self,var):
+		response = 0
+		if isinstance(var, cStringIO.InputType):
+			stringIO.seek(0, os.SEEK_END)
+			response = stringIO.tell()
+			stringIO.seek(0)
+		else:
+			response = sys.getsizeof(var)
+		return response
+	def model(self,taskId):
+		pass
