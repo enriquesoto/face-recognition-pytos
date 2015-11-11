@@ -6,35 +6,69 @@ from PIL import Image
 import numpy as np
 import pytos_daemon as pd
 import os
+import inspect
 import pytosdb
 import time
+import utils
+import sys
 
 class Offloading:
 	func = None
-	def __init__(func):
+	args = None
+	task = None
+	args = None
+	kwargs = None
+	result = None
+	def __init__(self,func,args,kwargs):
 		self.func=func
+		self.args=args
+		self.kwargs=kwargs
 	def prepare(self):
+		os.system('python pytos/pytos_daemon.py &')
+		db = pytosdb.PytosDB() #create initial DB
+	
+	def decision(self):
+		conn = rpyc.connect("localhost", 22345)
+		c = conn.root
+		offload = c.getOffloadingDesicion()
+		if not offload:
+			start_time = time.time()
+			self.result = func(args,kwargs)
+			end_time = time.time()
+			timeLocally = end_time - start_time
+			#paralelize
+			methodBody = inspect.getsourcelines(func)
+			methodDeclaration = utils.extractMethodDeclaration(methodBody)
+			methodWeight = sys.getsizeof(methodBody)
+			tasksRows = c.getTasks(methodDeclaration,methodWeight) #query if there is not enought remote calls information
+			functionBody = inspect.getsource(func)
+			
+			if Task.getRemoteCalls(tasksRows) < constants.N_MIN_REMOTE_CALLS:
+				print "enviando a cloudlet con fines estadisticos"
+				task = Task(methodDeclaration,methodWeight,Solver.getSizeInBytes(args),timeLocally,functionBody)
+			if Task.getLocalCalls(taskRows) < constants.N_MIN_LOCAL_CALLS:
+				print "logging for stats"
+				
+
+	def persists(self):
 		pass
 	
-	def decision(self)
-		pass
-	
-	def persists(self)
-		pass
-	
-	def start(self)
+	def start(self):
 		self.prepare()
 		self.decision()
-		self.persists()
+		#self.persists()
 
 def offload(func):
     def inner(*args,**kwargs):
 		urlServer = constants.SERVER_ADDRESS+':'+str(constants.PORT)		
 
-
+		
 		#pdb.set_trace()
 		db = pytosdb.PytosDB()
 		os.system('python pytos/pytos_daemon.py &')
+		
+		off = Offloading(func,args,kwargs)
+
 		argsObj = args[0]
 		##basenamecvs = argsObj.basenamecvs
 		#inputFolder = argsObj.pathInput

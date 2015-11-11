@@ -6,6 +6,9 @@ import constants
 from tendo import singleton
 from rpyc.utils.server import ThreadedServer
 from threading import Thread
+import pytosdb
+#development
+import pdb
 
 class Global():
 	offloading=False
@@ -15,7 +18,11 @@ class MyService(rpyc.Service):
 	def exposed_getOffloadingDesicion(self):
 		main.iddleTime=0
 		return main.offloading
-
+	def exposed_getTasks(self,methodDeclaration,methodWeight): # returns how many tasks left to complete the minium quantity to forecast the expected time
+		#pdb.set_trace()
+		nTasks = Task.getTasksByProperties(self,methodDeclaration,methodWeight)
+		#return constants.N_FIRST_REMOTE_CALLS-len(nTasks)
+		return nTasks
 if __name__ == '__main__':
 	me = singleton.SingleInstance() # will sys.exit(-1) if other instance is running
 	server = ThreadedServer(MyService, port = 22345)
@@ -29,7 +36,7 @@ if __name__ == '__main__':
 		if main.idleTime >= constants.killingTime:
 			sys.exit()
 		main.idleTime += constants.timeGap 
-		main.offloading =True
+		main.offloading =False
 		time.sleep(constants.timeGap)
 
 class Solver():

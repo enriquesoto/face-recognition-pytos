@@ -12,7 +12,12 @@
 SERVER_ADDRESS="http://192.168.0.102"
 timeGap=3
 killingTime=1800
-nFirstRemoteCalls=10
+
+N_MIN_REMOTE_CALLS = 10
+N_MAX_REMOTE_CALLS = 50
+
+N_MIN_LOCAL_CALLS = 10
+N_MAX_LOCAL_CALLS =50
 
 ROOT_DIR='pytos/'
 DB_FILENAME='stats.db'
