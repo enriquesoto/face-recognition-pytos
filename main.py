@@ -1,6 +1,6 @@
 from pytos.pytos import offload 
 import numpy as np
-import os,cv2,time,pdb,sys,constants
+import os,time,pdb,sys,constants
 
 class Main:
 
@@ -21,6 +21,7 @@ class Main:
 			self.startFromDirectory()		
 	
 	def startFromDirectory(self):
+		import cv2
 		self.pathInput = constants.PATH_IMG_INPUT   #input folder where images will be taken from
 		self.pathOutput = constants.PATH_IMG_OUTPUT  #output where imagens will be stored
 		listing = os.listdir(self.pathInput)
@@ -28,7 +29,8 @@ class Main:
 			filePath = self.pathInput+file
 			self.tmpImgFilebasename = os.path.basename(filePath)
 			img = cv2.imread(filePath)
-			faces = self.faceRecognition(img)
+			faceCascade = cv2.CascadeClassifier(self.settingsCascade)
+			faces = self.faceRecognition(img,faceCascade)
 			if faces is not None:
 				#pdb.set_trace()
 				for (x,y,w,h) in faces:
@@ -37,6 +39,7 @@ class Main:
 
 	def startFromVideoCapture(self):
 		#self.pathOutput = constants.PATH_IMG_OUTPUT  #output where imagens will be stored
+		import cv2
 		video_capture = cv2.VideoCapture(0)
 		ret = video_capture.set(3,constants.VIDEO_WIDTH) #320
 		ret = video_capture.set(4,constants.VIDEO_HEIGHT) #200
@@ -65,12 +68,12 @@ class Main:
 			print "dimen %d x %d fps: %d" %(width,height,fps)
 			#cv2.imshow('Video', frame)
 		
-		
+	@staticmethod
 	@offload #evaluate
-	def faceRecognition(self,img):
-		image_faces = []
+	def faceRecognition(img,faceCascade):
+		import cv2
 		gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-		faceCascade = cv2.CascadeClassifier(self.settingsCascade)
+		#faceCascade = cv2.CascadeClassifier(self.settingsCascade)
 		faces = faceCascade.detectMultiScale(gray,scaleFactor=1.1,minNeighbors=5,minSize=(30, 30), flags = cv2.cv.CV_HAAR_SCALE_IMAGE)
 		return faces
 
