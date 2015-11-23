@@ -1,4 +1,5 @@
 import constants,inspect,time,requests,pdb,os,csv,datetime,os,cv2,simplejson
+import Pyro4
 import rpyc
 from StringIO import StringIO
 from cStringIO import StringIO
@@ -11,6 +12,7 @@ import pytosdb
 import time
 from utils import Utils
 import sys
+import marshal
 
 class Offloading:
     func = None
@@ -19,76 +21,62 @@ class Offloading:
     args = None
     kwargs = None
     result = None
-    def __init__(self,func,args,kwargs):
+    def __init__(self,func,args,kwargs,resources):
         self.func=func
         self.args=args
         self.kwargs=kwargs
+        self.resources = resources
     def prepare(self):
         os.system('python pytos/pytos_daemon.py &')
         db = pytosdb.PytosDB() #create initial DB
     def decision(self):
         conn = rpyc.connect("localhost", 22345)
         c = conn.root
-        offload = c.getOffloadingDesicion()
+        argsSize = Utils.getArgsSize(self.args)
+        offload = c.getOffloadingDesicion(argsSize)
+        #pdb.set_trace()
+        #offload = True
         if not offload:
-            start_time = time.time()
+            startTime = time.time()
             self.result = self.func(*self.args,**self.kwargs)
-            end_time = time.time()
-            timeLocally = end_time - start_time
+            endTime = time.time()
+            timeLocally = endTime - startTime
             #paralelize create a new thread
-            methodBody = inspect.getsourcelines(self.func)
-            methodDeclaration = Utils.extractMethodDeclaration(methodBody)
-            methodWeight = sys.getsizeof(methodBody)
-            #tasksRows = c.getTasks(methodDeclaration,methodWeight) #query if there is not enought remote calls information
-            tasksRows = pytosdb.TaskDAO.getTasksByProperties(methodDeclaration,methodWeight)
-            functionBody = inspect.getsource(self.func)
-            if pytosdb.TaskDAO.getRemoteCalls(tasksRows) < constants.N_MIN_REMOTE_CALLS:
-                print "enviando a cloudlet con fines estadisticos"
-            if pytosdb.TaskDAO.getLocalCalls(tasksRows) < constants.N_MIN_LOCAL_CALLS:
-                print "logging for stats"
-                argument= self.args[1]
-                argsSize = Solver.getSizeInBytes(argument)
-                task = pytosdb.Task(methodDeclaration,methodWeight,argsSize,timeLocally,functionBody)
-                taskDAO = pytosdb.TaskDAO(task)
-            
+            aTask = pytosdb.Task(self.func,timeLocally,self.args)
+            #aTask.initFromFunc(self.func,timeLocally,self.args)  
+            #pdb.set_trace()
+            asyncThreadProfiler = pytosdb.TaskWriterThread(aTask,self.func,self.args)
+            asyncThreadProfiler.start() #async task
+        else:
+            #pdb.set_trace()
+            Pyro4.config.SERIALIZERS_ACCEPTED.add("pickle")
+            Pyro4.config.SERIALIZER="pickle"
+            remoteCall = Pyro4.Proxy("PYRONAME:pytos.remoteCall")
+            #remoteServer = rpyc.connect("localhost",12345, config = {"allow_all_attrs" : True})
+            #c = remoteServer.root
+            methodSignature = self.func.__name__
+            #functionSource = inspect.getsource(self.func)
+            funcEncoded = marshal.dumps(self.func.func_code)
+            #pdb.set_trace()
+            response = remoteCall.callRemoteMethod(funcEncoded,methodSignature,self.args)
+            self.result = response["result"]
+            timeExecution = response["time"]
+
     def start(self):
         self.prepare()
         self.decision()
 
-def offload(func):
-    def inner(*args,**kwargs):
-        pdb.set_trace()
-        urlServer = constants.SERVER_ADDRESS+':'+str(constants.PORT)
-        offloading = Offloading(func,args,kwargs)
-        offloading.start()
-        db = pytosdb.PytosDB()
-        os.system('python pytos/pytos_daemon.py &')
-        conn = rpyc.connect("localhost", 22345)
-        c = conn.root
-        offload = c.getOffloadingDesicion()
-        if  True:
-            print "---> decorated function started locally"
-            start_time = time.time()
-            result = func(*args,**kwargs)
-            end_time = time.time()
-            print "--> decorated function ended locally"
-            print("--- %s seconds ---" % (end_time - start_time))
-            return result
-        else:
-            print "---> decorated function started remotelly"
-            start_time = time.time()
-            task='/heavyTask'
-            openCVImage = args[1]
-            restUrl = urlServer+task
-            file = numpyArrayToStringIO(openCVImage)
-            files = {'file':file }
-            r = requests.post(restUrl, files=files)
-            end_time = time.time()
-            facesTemp = StringIO(r.content) 
-            print "--> decoraed function ended remotelly"
-            print("--- %s seconds ---" % (end_time - start_time))
-            return  simplejson.loads(facesTemp.read())
-    return inner
+def offload(resources):
+    def wrapper(func):
+        def inner(*args,**kwargs):
+            Pyro4.config.SERIALIZERS_ACCEPTED.add('pickle')
+            Pyro4.config.SERIALIZER = "pickle"
+            #urlServer = constants.SERVER_ADDRESS+':'+str(constants.PORT)
+            offloading = Offloading(func,args,kwargs,resources)
+            offloading.start()
+            return offloading.result
+        return inner
+    return wrapper
 
 def stringIOToNumpyArray(stringIO):
     #inmem_fle = StringIO()
