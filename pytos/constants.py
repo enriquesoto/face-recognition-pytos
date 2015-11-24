@@ -29,3 +29,5 @@ OUTPUT_WHEN_REMOTE = 'client/resultWhenRemote/'
 #DATA_BASENAME = 'test01local'
 DATA_TEST_LOCAL = 'pytos/data/localTest/'
 DATA_TEST_REMOTE = 'pytos/data/remote1Test/'
+URI_DISCOVERY_ENDPOINT = "http://pytosboost.in:5000/todo/api/v1.0/cloudlet/"
+WEIGHT_FILE = "pytos/resources/weight.jpg"

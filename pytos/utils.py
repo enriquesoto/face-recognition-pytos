@@ -36,7 +36,13 @@ class Utils:
     img_str = cv2.imencode('.jpg', numpyArray)[1].tostring()
     response = StringIO(img_str)
     return response
-  
+
+  @staticmethod
+  def getSSID():
+    from wireless import Wireless
+    wireless = Wireless()
+    return  wireless.current()
+
 
   
  

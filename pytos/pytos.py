@@ -5,7 +5,6 @@ from StringIO import StringIO
 from cStringIO import StringIO
 from PIL import Image
 import numpy as np
-from pytos_daemon import Solver
 import os
 import inspect
 import pytosdb
@@ -33,9 +32,13 @@ class Offloading:
         conn = rpyc.connect("localhost", 22345)
         c = conn.root
         argsSize = Utils.getArgsSize(self.args)
-        offload = c.getOffloadingDesicion(argsSize)
+        methodSignature = self.func.__name__
+        methodBody = inspect.getsource(self.func)
+        methodWeight = sys.getsizeof(methodBody)
+        offload = c.getOffloadingDesicion(methodSignature,methodWeight,argsSize)
         #pdb.set_trace()
         #offload = True
+        print offload
         if not offload:
             startTime = time.time()
             self.result = self.func(*self.args,**self.kwargs)
@@ -48,13 +51,13 @@ class Offloading:
             asyncThreadProfiler = pytosdb.TaskWriterThread(aTask,self.func,self.args)
             asyncThreadProfiler.start() #async task
         else:
-            #pdb.set_trace()
             Pyro4.config.SERIALIZERS_ACCEPTED.add("pickle")
             Pyro4.config.SERIALIZER="pickle"
-            remoteCall = Pyro4.Proxy("PYRONAME:pytos.remoteCall")
+
+            #remoteCall = Pyro4.Proxy("PYRONAME:pytos.remoteCall")
+            remoteCall = Pyro4.Proxy(c.getUri())
             #remoteServer = rpyc.connect("localhost",12345, config = {"allow_all_attrs" : True})
             #c = remoteServer.root
-            methodSignature = self.func.__name__
             #functionSource = inspect.getsource(self.func)
             funcEncoded = marshal.dumps(self.func.func_code)
             #pdb.set_trace()
@@ -78,24 +81,3 @@ def offload(resources):
         return inner
     return wrapper
 
-def stringIOToNumpyArray(stringIO):
-    #inmem_fle = StringIO()
-    #fileStorage.save(inmem_file)  # save to memory
-    #inmem_file.reset()  # seek back to byte 0, otherwise .read() will return ''
-    #pdb.set_trace()
-    file_bytes = np.frombuffer(stringIO.read(), np.uint8)
-    #file_bytes = np.asarray(bytearray(stringIO.read()), dtype=np.uint8)
-    #numpyArray = cv2.imdecode(file_bytes, cv2.CV_LOAD_IMAGE_UNCHANGED)
-    numpyArray = cv2.imdecode(file_bytes,1)
-    return numpyArray
-
-def numpyArrayToStringIO(numpyArray):
-    img_str = cv2.imencode('.jpg', numpyArray)[1].tostring()
-    response = StringIO(img_str)
-    return response
-def getSizeInBytes(stringIO):
-    
-    stringIO.seek(0, os.SEEK_END)
-    bytesCount = stringIO.tell()
-    stringIO.seek(0)
-    return bytesCount

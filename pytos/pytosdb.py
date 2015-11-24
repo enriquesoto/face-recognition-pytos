@@ -9,7 +9,7 @@ from threading import Thread
 from utils import Utils
 import marshal
 import Pyro4
-
+import rpyc
 #dev
 import pdb
 
@@ -28,7 +28,9 @@ class TaskWriterThread(Thread):
     if TaskDAO.getRemoteCalls(tasksRows) < constants.N_MIN_REMOTE_CALLS:
       Pyro4.config.SERIALIZERS_ACCEPTED.add("pickle")
       Pyro4.config.SERIALIZER="pickle"
-      remoteCall = Pyro4.Proxy("PYRONAME:pytos.remoteCall")
+      conn = rpyc.connect("localhost", 22345)
+      c = conn.root
+      remoteCall = Pyro4.Proxy(c.getUri())
       funcEncoded = marshal.dumps(self.func.func_code)
       response = remoteCall.callRemoteMethod(funcEncoded,self.task.methodDeclaration,self.args)
       timeExecution = response["time"]
@@ -63,33 +65,22 @@ class Task:
 
 class TaskDAO:
   def __init__(self,task):
-    print "Inserting task"
+    #print "Inserting task"
     with sqlite3.connect(constants.ROOT_DIR+constants.DB_FILENAME) as conn:
       cursor = conn.cursor()
       query = "insert into task (id, method_declaration, method_weight, args_size, time_locally, time_remotelly, function_body) values (:id,:method_declaration,:method_weight,:args_size, :time_locally, :time_remotelly, :function_body)"
       cursor.execute(query, {'id':task.id,'method_declaration':task.methodDeclaration, 'method_weight':task.methodWeight, 'args_size':task.argsSize, 'time_locally':task.timeLocally,'time_remotelly':task.timeRemotelly, 'function_body':task.methodBody})
   
   def updateTask(self,task):
-    print "Updating Task"
+    #print "Updating Task"
     with sqlite3.connect(constants.ROOT_DIR+constants.DB_FILENAME) as conn:
       cursor = conn.cursor()
       query = "update task set method_declaration =:method_declaration, method_weight =: method_weight, argsSize =:argsSize, time_locally = :time_locally, time_remotelly =:time_remotelly, return_weight =:return_weight, function_body =:function_body where id = :id"
       cursor.execute(query, {'method_declaration':task.methodDeclaration,'method_weight':task.methodWeight, 'argsSize':task.argsSize, 'time_locally':task.timeLocally,'time_remotelly':task.timeRemotelly,'return_weight':task.returnWeight,'function_body':task.methodBody, 'id':task.id})
 
-  #def getTask(self,id):
-  #  print "getting a task"
-  #  with sqlite3.connect(constants.ROOT_DIR+constants.DB_FILENAME) as conn:
-  #    cursor = conn.cursor()
-  #    query = "select * from task where id =: task_id "
-  #    cursor.execute(query,{'task_id':id})
-  #    task = None
-  #    for row in cursor.fetchall():
-  #      task = Task(row)
-  #  return task
-
   @staticmethod
   def getTasksByProperties(methodDeclaration,methodWeight):
-    print "getting a task by properties "
+    #print "getting a task by properties "
     with sqlite3.connect(constants.ROOT_DIR+constants.DB_FILENAME) as conn:
       cursor = conn.cursor()
       query = "select * from task where method_declaration =:method_declaration AND method_weight =:method_weight"
@@ -98,8 +89,30 @@ class TaskDAO:
       return answers
 
   @staticmethod
+  def getAllTasks():
+    #print "getting all tasks that may be offloaded "
+    with sqlite3.connect(constants.ROOT_DIR+constants.DB_FILENAME) as conn:
+      cursor = conn.cursor()
+      query = "select distinct method_declaration,method_weight from task"
+      cursor.execute(query)
+      answers = cursor.fetchall()
+      return answers
+
+
+  @staticmethod
+  def getExecutionsTimes(methodSignature,methodWeight):
+    #print "getting executions times for forecasting"
+    with sqlite3.connect(constants.ROOT_DIR+constants.DB_FILENAME) as conn:
+      cursor = conn.cursor()
+      query = "select args_size, time_locally, time_remotelly  from task where method_declaration =:method_declaration AND method_weight =:method_weight  AND time_remotelly >0 AND time_locally >0"
+      cursor.execute(query,{'method_declaration':methodSignature,'method_weight':methodWeight})
+      answers = cursor.fetchall()
+      return answers
+
+
+  @staticmethod
   def getRemoteCalls(nTasksRows):
-    print "getting n remote calls"
+    #print "getting n remote calls"
     #pdb.set_trace()
     nRemoteCalls = 0
     for task in nTasksRows:
@@ -110,7 +123,7 @@ class TaskDAO:
 
   @staticmethod
   def getLocalCalls(nTasksRows):
-    print "getting n local calls"
+    #print "getting n local calls"
     nLocalCalls = 0
     for task in nTasksRows:
       if task[constants.TIME_LOCALLY_FIELD] is not None:
@@ -124,11 +137,9 @@ class PytosDB:
     db_is_new = not os.path.exists(constants.ROOT_DIR+constants.DB_FILENAME)
     with sqlite3.connect(constants.ROOT_DIR+constants.DB_FILENAME) as conn:
       if db_is_new:
-        print 'Creating schema'
+        #print 'Creating schema'
         conn.execute('''create table task (id text, method_declaration text not null, method_weight not null, args_size integer,  time_locally real not null, time_remotelly real, return_weight integer, function_body text not null);''')
-        print "Table Created!"
+        #print "Table Created!"
         #conn.close() #can not operate on a closed db
-      else:
-        print 'Db already exists, assume scheme does, too.'
   def xxx(self):
     pass
