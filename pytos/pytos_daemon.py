@@ -80,6 +80,7 @@ class MyService(rpyc.Service):
     return main.uriCloudlet
 
 if __name__ == '__main__':
+  #pdb.set_trace()
   me = singleton.SingleInstance() # will sys.exit(-1) if other instance is running
   Pyro4.config.SERIALIZERS_ACCEPTED.add("pickle")
   Pyro4.config.SERIALIZER="pickle"

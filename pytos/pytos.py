@@ -29,41 +29,42 @@ class Offloading:
         os.system('python pytos/pytos_daemon.py &')
         db = pytosdb.PytosDB() #create initial DB
     def decision(self):
-        conn = rpyc.connect("localhost", 22345)
-        c = conn.root
-        argsSize = Utils.getArgsSize(self.args)
-        methodSignature = self.func.__name__
-        methodBody = inspect.getsource(self.func)
-        methodWeight = sys.getsizeof(methodBody)
-        offload = c.getOffloadingDesicion(methodSignature,methodWeight,argsSize)
-        #pdb.set_trace()
-        #offload = True
-        print offload
-        if not offload:
-            startTime = time.time()
-            self.result = self.func(*self.args,**self.kwargs)
-            endTime = time.time()
-            timeLocally = endTime - startTime
-            #paralelize create a new thread
-            aTask = pytosdb.Task(self.func,timeLocally,self.args)
-            #aTask.initFromFunc(self.func,timeLocally,self.args)  
-            #pdb.set_trace()
-            asyncThreadProfiler = pytosdb.TaskWriterThread(aTask,self.func,self.args)
-            asyncThreadProfiler.start() #async task
-        else:
-            Pyro4.config.SERIALIZERS_ACCEPTED.add("pickle")
-            Pyro4.config.SERIALIZER="pickle"
-
-            #remoteCall = Pyro4.Proxy("PYRONAME:pytos.remoteCall")
-            remoteCall = Pyro4.Proxy(c.getUri())
-            #remoteServer = rpyc.connect("localhost",12345, config = {"allow_all_attrs" : True})
-            #c = remoteServer.root
-            #functionSource = inspect.getsource(self.func)
-            funcEncoded = marshal.dumps(self.func.func_code)
-            #pdb.set_trace()
-            response = remoteCall.callRemoteMethod(funcEncoded,methodSignature,self.args)
-            self.result = response["result"]
-            timeExecution = response["time"]
+      conn = rpyc.connect("localhost", 22345)
+      #pdb.set_trace()
+      c = conn.root
+      argsSize = Utils.getArgsSize(self.args)
+      methodSignature = self.func.__name__
+      methodBody = inspect.getsource(self.func)
+      methodWeight = sys.getsizeof(methodBody)
+      offload = c.getOffloadingDesicion(methodSignature,methodWeight,argsSize)
+      #pdb.set_trace()
+      #offload = True
+      print offload
+      if not offload:
+          startTime = time.time()
+          self.result = self.func(*self.args,**self.kwargs)
+          endTime = time.time()
+          timeLocally = endTime - startTime
+          #paralelize create a new thread
+          aTask = pytosdb.Task(self.func,timeLocally,self.args)
+          #aTask.initFromFunc(self.func,timeLocally,self.args)  
+          #pdb.set_trace()
+          asyncThreadProfiler = pytosdb.TaskWriterThread(aTask,self.func,self.args)
+          asyncThreadProfiler.start() #async task
+          asyncThreadProfiler.join()
+      else:
+          Pyro4.config.SERIALIZERS_ACCEPTED.add("pickle")
+          Pyro4.config.SERIALIZER="pickle"
+          #remoteCall = Pyro4.Proxy("PYRONAME:pytos.remoteCall")
+          remoteCall = Pyro4.Proxy(c.getUri())
+          #remoteServer = rpyc.connect("localhost",12345, config = {"allow_all_attrs" : True})
+          #c = remoteServer.root
+          #functionSource = inspect.getsource(self.func)
+          funcEncoded = marshal.dumps(self.func.func_code)
+          #pdb.set_trace()
+          response = remoteCall.callRemoteMethod(funcEncoded,methodSignature,self.args)
+          self.result = response["result"]
+          timeExecution = response["time"]
 
     def start(self):
         self.prepare()

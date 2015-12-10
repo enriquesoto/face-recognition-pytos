@@ -28,6 +28,7 @@ class TaskWriterThread(Thread):
     if TaskDAO.getRemoteCalls(tasksRows) < constants.N_MIN_REMOTE_CALLS:
       Pyro4.config.SERIALIZERS_ACCEPTED.add("pickle")
       Pyro4.config.SERIALIZER="pickle"
+      #pdb.set_trace()
       conn = rpyc.connect("localhost", 22345)
       c = conn.root
       remoteCall = Pyro4.Proxy(c.getUri())
